@@ -1,0 +1,48 @@
+# Ignore Python cache and virtual environments
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+.venv/
+
+# Ignore hidden files and folders
+.git/
+.gitignore
+*.swp
+*.bak
+*.tmp
+*.log
+
+# Ignore local settings
+local.settings.json
+
+# Ignore tests and development scripts
+tests/
+test/
+*.test.py
+scripts/
+*.ipynb
+
+# Ignore IDE/editor config
+.vscode/
+.idea/
+*.code-workspace
+
+# Ignore other build/deployment artifacts
+*.egg-info/
+dist/
+build/
+*.tar.gz
+*.zip
+
+# Igone README and requirements files
+README.md
+requirements.txt
+
+# Ignore assets and sql folders 
+sql/
+sql/**
+assets/
+assets/**
