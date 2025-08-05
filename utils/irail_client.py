@@ -111,8 +111,8 @@ class IRailClient:
                 canceled = 1 if schedule.get("canceled", "0") == "1" else 0
 
                 schedule_entry = {
-                    "id": vehicle_id,
-                    "train": vehicle_name,
+                    "train_id": vehicle_id,
+                    "train_name": vehicle_name,
                     "direction": direction,
                     "departure_station": departure_station,
                     "arrival_station": arrival_station,
