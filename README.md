@@ -1,175 +1,252 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/Tn34LQcr)
-# 🚆 Azure Train Data Project with iRail API
+# 🚆 Azure Train Schedules - Live Board System
 
-- Repository: `challenge-azure`
-- Type of Challenge: `Learning`
-- Duration: `5 days`
-- Deadline: `dd/mm/yy H:i AM/PM`
-- Team challenge : `solo`
+A serverless Azure Functions application that fetches live train schedules from the iRail API and stores them in Azure SQL Database for creating a live departure/arrival board.
 
-## Azure Setup
-You'll be provided a @becode.education Microsoft account.
+## 📋 Project Overview
 
-Use it to create an Azure account here:
-https://portal.azure.com/#home
+This project implements a real-time train schedule system using Azure Functions to:
+- Fetch live train data from the iRail API for both arrivals and departures
+- Store the data in Azure SQL Database
+- Automatically update schedules every hour (configurable via cron)
+- Provide HTTP endpoint for manual data retrieval
+- Support multiple stations simultaneously
 
-Once it's done start **Azure for Students**. Thanks to this you won't need to register a credit card and you'll get:
+## 🏗️ Architecture
 
-- $100 credit to spend in Azure
-- Free services
+### Azure Resources
+- **Function App**: `func-train-schedules`
+- **SQL Database**: `sqldb-train-schedules`
+- **Storage Account**: Required for Azure Functions runtime
 
-More information here: https://azure.microsoft.com/en-us/free/students/
+### Functions
+1. **update_schedules** (HTTP Trigger): Manual fetch of live schedules for specified stations
+2. **update_schedules_timer** (Timer Trigger): Automatic updates based on configurable cron schedule (default: every hour)
 
-When the setup is done you can start creating resources!
+## 📁 Project Structure
 
-![alt text](assets/azure-for-student.png)
+```
+af-belgium-train-schedules/
+├── function_app.py          # Main Azure Functions app with HTTP and Timer triggers
+├── utils/                   # Utility modules
+│   ├── db_client.py         # Database operations and connection management
+│   └── irail_client.py      # iRail API client with request handling
+├── sql/                     # Database schema
+│   └── init_schema.sql      # Table creation script
+├── requirements.txt         # Python dependencies
+├── host.json                # Function app configuration
+├── local.settings.json      # Local development settings
+├── assets/                  # Project assets and documentation
+├── pbix/                    # Power BI dashboard files
+└── screenshots/           # Documentation screenshots
+```
 
-## 🎯 Project Overview
+## 🗄️ Database Schema
 
-Create a real-world data pipeline that fetches train departure data from the [iRail API](https://docs.irail.be/), normalizes it, and stores it in a SQL database — all deployed using Microsoft Azure.
+The application creates a `train_schedules` table with the following structure:
 
-This project is structured in three progressive levels:
+```sql
+CREATE TABLE train_schedules (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    train_id NVARCHAR(50) NOT NULL,
+    train_name NVARCHAR(50) NOT NULL,
+    direction NVARCHAR(10) NOT NULL,
+    departure_station NVARCHAR(100) NOT NULL,
+    arrival_station NVARCHAR(100) NOT NULL,
+    platform NVARCHAR(10) NOT NULL,
+    scheduled_time DATETIME NOT NULL,
+    actual_time DATETIME NOT NULL,
+    delay_minutes INT DEFAULT 0,
+    canceled TINYINT DEFAULT 0,
+    current_status NVARCHAR(10) NOT NULL,
+    last_updated DATETIME DEFAULT GETDATE()
+)
+```
 
-- 🟢 **Must-Have**: Set up core functionality — fetch and store data via Azure Portal using Azure Functions and Azure SQL Database.
-- 🟡 **Nice-to-Have**: Add automation (scheduling), build a live dashboard (e.g., Power BI), and enable data refresh.
-- 🔴 **Hardcode Level**: Explore full DevOps integration — CI/CD pipelines, scripting with Azure CLI, Docker deployment, and cloud-native infrastructure as code.
+## 🚀 Deployment Instructions
 
-👉 **Important:** You must complete the *Must-Have* stage first. However, it's crucial that you **think ahead to what kind of dashboard or insights you might want to build** (in Nice-to-Have and Hardcore Level). This will help you design the right data schema and fetch meaningful data now — avoiding the need to start over later.
+### Prerequisites
+- Azure subscription with Function App and SQL Database created
+- Python 3.12+ for local development
+- Azure Functions Core Tools (for local testing)
 
-## 🧠 Project Vision
+### Environment Variables
+Configure these in your Function App settings:
 
-Using the [iRail API](https://docs.irail.be), your mission is to create a **live, cloud-native dashboard** that gives insight into train operations in Belgium. You'll gather real-time public transport data, structure and store it in the cloud, and visualize it in a way that's useful and meaningful.
+```json
+{
+  "SQL_CONNECTION_STRING": "Driver={ODBC Driver 17 for SQL Server};Server=tcp:your-server.database.windows.net,1433;Database=sqldb-train-schedules;Uid=<your-username>;Pwd=<your-password>;Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;",
+  "TRAIN_STATIONS": "Brussels-Central,Brussels-North,Brussels-South",
+  "UPDATE_SCHEDULES_TIMER_CRON": "0 * * * * *"
+}
+```
 
-You're encouraged to bring **your own ideas and creativity**. The iRail API offers a variety of data: live departures, delays, connections, train routes, and more. Your final dashboard should **tell a story**, answer real-world questions, or help someone make smarter decisions about train travel.
+### Deployment Steps
 
-## 💡 Example Use Cases to Consider Early
+1. **Clone and prepare the project**:
+   ```bash
+   git clone https://github.com/albertopd/af-belgium-train-schedules.git
+   cd af-belgium-train-schedules
+   ```
 
-These are some potential directions your dashboard could take. Pick one early to help you decide:
+2. **Deploy using Azure Portal**:
+   - Zip the entire project folder
+   - Go to your Function App in Azure Portal
+   - Navigate to "Deployment Center"
+   - Choose "Zip Deploy" and upload your zip file
 
-- **Live Departure Board**: Show current or recent train departures for a selected station
-- **Delay Monitor**: Track which stations or trains experience the most delays over time
-- **Route Explorer**: Let users check travel time and transfer info between two cities
-- **Train Type Distribution**: Visualize where and how different train types (IC, S, etc.) operate
-- **Peak Hour Analysis**: Show how train traffic and delays vary by time of day or week
-- **Real-Time Train Map** (advanced): Plot moving trains with geolocation
+3. **Or deploy using Azure CLI**:
+   ```bash
+   func azure functionapp publish func-train-schedules --python
+   ```
 
-🧭 **Plan ahead**: Even though you’re currently focusing on fetching and storing data, choose a use case now so you start downloading the **right endpoints and fields** (e.g., platform, delay, train type, connection route). This makes later stages easier and more meaningful.
+## 🔧 Configuration
 
-## 🟢 Must-Have: Azure Function Pipeline via Azure Portal
+### Timer Schedule
+The `update_schedules_timer` function runs every hour by default using the cron expression:
+```
+"schedule": "0 * * * * *"
+```
 
-### Objective  
-Use the Azure **web portal** (no CLI) to deploy a **Python Azure Function** that fetches live train data and inserts it into an **Azure SQL Database**.
+To modify the schedule, set the `UPDATE_SCHEDULES_TIMER_CRON` environment variable.
 
-### Azure Services Used
+### Station Configuration
+Set the `TRAIN_STATIONS` environment variable to specify which stations to monitor (comma-separated):
+```
+"TRAIN_STATIONS": "Brussels-Central,Brussels-North,Brussels-South"
+```
 
-| Azure Service              | Purpose                                       |
-|---------------------------|-----------------------------------------------|
-| Azure Function App (Python) | Run data ingestion logic as a serverless app |
-| Azure SQL Database         | Store normalized train data                   |
-| Azure Storage Account      | Dependency for Function App                  |
-| App Service Plan (Consumption) | Host the Function with autoscaling      |
+## 📡 API Usage
 
-### Steps
+### Update Schedules (HTTP Trigger)
 
-1. **Create Azure SQL Database** via the portal:
-   - Use the “Create a resource” wizard
-   - Set up firewall to allow external IP
-   - Note the connection string for later use
+**Endpoint**: `https://func-train-schedules.azurewebsites.net/api/update_schedules`
 
-2. **Create an Azure Function App**:
-   - Use “Python 3.10” as the runtime
-   - Deploy an HTTP-triggered function using the web editor
-   - Use environment variables for credentials (in App Settings)
+**Parameters**:
+- `stations` (optional): Comma-separated list of stations (defaults to `TRAIN_STATIONS` environment variable)
 
-3. **Implement the logic** to:
-   - Call the iRail API (`/liveboard` or /`connections`)
-   - Normalize the JSON using Python libraries (e.g., pandas)
-   - Connect and write to Azure SQL
+**Example**:
+```
+GET /api/update_schedules?stations=Brussels-Central,Brussels-North
+```
 
-4. **Test the Function** directly from the portal and verify that the data appears in your SQL table.
+**Response**:
+```json
+{
+  "message": "Schedules updated successfully",
+  "stations": ["Brussels-Central", "Brussels-North"],
+  "arrival_schedules_counts": [15, 12],
+  "departure_schedules_counts": [18, 14],
+  "total_schedules": 59,
+  "schedules": [...]
+}
+```
 
-### Deliverables
+## 🔍 Monitoring
 
-- ✅ Deployed Azure Function (HTTP endpoint)
-- ✅ Azure SQL DB with at least one filled table
-- ✅ Documentation (README) describing your process
-  
-## 🟡 Nice-to-Have: Automation, Power BI, and Scheduling
+- View function execution logs in Azure Portal under "Functions" > "Monitor"
+- Check Application Insights for detailed telemetry and performance metrics
+- Monitor database connections and query performance in Azure SQL Database
+- Set up alerts for function failures or database connection issues
 
-### Objective  
-Extend the project by automating data ingestion and building live dashboards.
+## 🧪 Local Development
 
-### Additions
+### Setup
+1. **Install Azure Functions Core Tools**:
+   ```bash
+   npm install -g azure-functions-core-tools@4 --unsafe-perm true
+   ```
 
-1. **Scheduled Data Fetching**
-   - Add a **Timer Trigger** to your Function App
-   - Fetch new data every hour (or another interval)
-   - Ensure duplicate entries are handled in your SQL table
+2. **Create Python virtual environment**:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
 
-2. **Live Power BI Dashboard**
-   - Connect **Power BI Service (online)** to Azure SQL
-   - Create visuals: bar charts, line graphs (e.g., trains per hour)
-   - Publish and embed the dashboard (optional)
+3. **Configure local settings**:
+   - Copy `local.settings.json.example` to `local.settings.json`
+   - Update the SQL connection string with your database credentials
 
-3. **Improved Data Schema**
-   - Normalize additional fields like platform, status, vehicle type
-   - Use proper SQL data types: `DATETIME`, `INT`, `VARCHAR`
+4. **Run locally**:
+   ```bash
+   func start
+   ```
 
-4. **Logging & Monitoring**
-   - Use Azure Application Insights for runtime metrics and error tracking
-   - Log custom events in your Function
+### Testing
+- **HTTP Function**: `http://localhost:7071/api/update_schedules`
+- **Timer Function**: Will run automatically based on cron schedule when local runtime is active
 
-## 🔴 Hardcore Level: CI/CD, Azure CLI, and DevOps Automation
+## 📊 Data Flow
 
-### Objective  
-Take your project to production-grade deployment using DevOps practices and cloud scripting.
+```
+iRail API → Azure Function → Azure SQL Database → Live Board Display
+     ↑              ↑              ↑                    ↑
+  Live data    Serverless      Persistent          Real-time
+               processing      storage             updates
+```
 
-### Advanced Features
-
-1. **CI/CD Pipeline**  
-   - Automate building, testing, and deploying your Function App and infrastructure.  
-   - Use GitHub Actions or Azure DevOps Pipelines for repeatable, reliable delivery.
-
-2. **Infrastructure as Code with Terraform**  
-   - Define and provision Azure resources declaratively using Terraform configs.  
-   - Enables version-controlled, repeatable infrastructure deployments integrated into your pipeline.
-
-3. **Azure CLI and Scripting Automation**  
-   - Write Python or shell scripts to automate Azure resource management and configuration tasks.  
-   - Useful for custom setup steps not covered by Terraform or CI/CD tools.
-
-4. **Authentication and Security Best Practices**  
-   - Implement Managed Identities to avoid hardcoded secrets.  
-   - Secure Function endpoints with OAuth, API keys, or Azure AD integration.
-
-5. **Containerization with Docker**  
-   - Package your Azure Function or pipeline code in Docker containers.  
-   - Deploy containers to Azure Container Registry and run via Azure Functions Premium Plan or Azure Container Apps.
-
-
-## 📝 Evaluation Criteria
-
-| Category                      | Must-Have | Nice-to-Have | Hardcore Level     |
-|------------------------------|--------------|----------------------|----------------------------|
-| Function App is deployed     | ✅            | ✅                    | ✅                          |
-| SQL DB contains live data    | ✅            | ✅                    | ✅                          |
-| Code structure and clarity   | Basic        | Good abstraction     | Modular, reusable          |
-| Automation & scheduling      | ❌            | ✅                    | ✅ with pipeline automation |
-| Dashboard                    | ❌            | ✅ Power BI Live      | ✅ Auto-refresh + embed     |
-| Deployment strategy          | Manual       | Partial scripts      | Full CI/CD pipeline         |
-| Use of environment configs   | Basic         | Partial              | Secrets vault or managed ID|
-
-
-## ✅ Submission Checklist
-
-- [ ] GitHub repo with all source code and README
-- [ ] Screenshot of Function App test run
-- [ ] Screenshot of SQL data table
-- [ ] If applicable, link to Power BI dashboard
-- [ ] (Optional) CI/CD pipeline config and diagram
+1. **iRail API** provides live train schedule data for Belgian railway stations
+2. **Azure Function** (Timer/HTTP triggers) fetches, processes, and normalizes the data
+3. **Azure SQL Database** stores the processed schedules with timestamps and status information
+4. **Live Board Display** consumes the stored data to show real-time departure/arrival information
 
 
-## 🔚 Final Notes
+## 🚨 Troubleshooting
 
-- Focus first on getting your **Function App to insert real data**
-- Treat each level as an **independent milestone**
+### Common Issues
+
+**1. Database Connection Failures**
+- Verify SQL connection string format
+- Check firewall rules allow Azure services
+- Ensure database credentials are correct
+
+**2. iRail API Timeouts**
+- API may be temporarily unavailable
+- Check logs for specific error messages
+- Consider implementing retry logic
+
+**3. Function Not Triggering**
+- Verify timer trigger cron expression
+- Check Function App is running (not stopped)
+- Review consumption plan limits
+
+**4. Data Not Updating**
+- Check if `clear_old_data()` is working correctly
+- Verify station names match iRail API format (use exact station names)
+- Monitor for parsing errors in logs
+- Ensure `TRAIN_STATIONS` environment variable is properly set
+
+### Debug Commands
+```bash
+# Check function status
+func azure functionapp list-functions func-train-schedules
+
+# View recent logs
+func azure functionapp logstream func-train-schedules
+
+# Test HTTP function locally
+curl "http://localhost:7071/api/update_schedules?stations=Brussels-Central"
+```
+
+## 🔮 Future Enhancements
+
+### Suggested Features
+- [ ] Historical data retention and analysis
+- [ ] Real-time notifications for delays
+- [ ] Train route mapping with connections
+- [ ] Multi-language support for station names
+
+### Suggested Improvements
+- [ ] Implement retry logic with exponential backoff
+- [ ] Add data validation and sanitization
+- [ ] Create unit tests for core functions
+- [ ] Add authentication for HTTP endpoints
+- [ ] Implement caching layer (Redis) for frequently accessed data
+
+## 📄 License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## 👥 Contributors
+
+- [Alberto Pérez Dávila](https://github.com/albertopd)
