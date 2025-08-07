@@ -3,3 +3,6 @@ azure-functions
 
 # HTTP requests
 requests
+
+# Database connectivity  
+pyodbc

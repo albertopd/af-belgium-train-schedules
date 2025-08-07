@@ -30,6 +30,10 @@ build/
 *.tar.gz
 *.zip
 
-# Optional: ignore local-only folders
+# Ignore local-only folders
 assets/
 sql/
+pbix/
+screenshots/
+
+*.md

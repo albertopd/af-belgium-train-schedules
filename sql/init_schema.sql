@@ -1,15 +1,15 @@
 CREATE TABLE train_schedules (
     id INT IDENTITY(1,1) PRIMARY KEY,
-    station_name NVARCHAR(100) NOT NULL,
     train_id NVARCHAR(50) NOT NULL,
-    vehicle NVARCHAR(50),
-    platform NVARCHAR(10),
-    destination NVARCHAR(100),
-    scheduled_time DATETIME,
-    actual_time DATETIME,
+    train_name NVARCHAR(50) NOT NULL,
+    direction NVARCHAR(10) NOT NULL,
+    departure_station NVARCHAR(100) NOT NULL,
+    arrival_station NVARCHAR(100) NOT NULL,
+    platform NVARCHAR(10) NOT NULL,
+    scheduled_time DATETIME NOT NULL,
+    actual_time DATETIME NOT NULL,
     delay_minutes INT DEFAULT 0,
     canceled TINYINT DEFAULT 0,
-    status NVARCHAR(50),
-    direction NVARCHAR(10),
+    current_status NVARCHAR(10) NOT NULL,
     last_updated DATETIME DEFAULT GETDATE()
 )
