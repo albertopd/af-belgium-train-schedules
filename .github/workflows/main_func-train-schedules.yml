@@ -14,29 +14,47 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Get code
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2️⃣ Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies
+      # 3️⃣ Install dependencies into local build folder
+      - name: Install dependencies into .python_packages
         run: |
+          mkdir -p .python_packages/lib/site-packages
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt --target ".python_packages/lib/site-packages"
 
+      # 4️⃣ Create deployment package (code + deps)
       - name: Create deployment package
         run: |
           mkdir -p package
-          rsync -av --exclude '.git*' --exclude '__pycache__' ./ ./package
+          rsync -av --exclude '.git*' --exclude '__pycache__' --exclude 'package' ./ ./package
           cd package
           zip -r ../functionapp.zip .
 
-      - name: Deploy to Azure
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: func-train-schedules
-          package: functionapp.zip
-          publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+      # 5️⃣ Extract credentials from publish profile
+      - name: Extract publish profile credentials
+        id: creds
+        run: |
+          PUBLISH_URL=$(echo "${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}" | xmllint --xpath "string(//publishProfile[@publishMethod='ZipDeploy']/@publishUrl)" -)
+          USERNAME=$(echo "${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}" | xmllint --xpath "string(//publishProfile[@publishMethod='ZipDeploy']/@userName)" -)
+          PASSWORD=$(echo "${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}" | xmllint --xpath "string(//publishProfile[@publishMethod='ZipDeploy']/@userPWD)" -)
+
+          echo "publish_url=$PUBLISH_URL" >> $GITHUB_OUTPUT
+          echo "username=$USERNAME" >> $GITHUB_OUTPUT
+          echo "password=$PASSWORD" >> $GITHUB_OUTPUT
+
+      # 6️⃣ Deploy via direct Kudu ZipDeploy
+      - name: Deploy via Kudu ZipDeploy
+        run: |
+          curl -X POST \
+            -u "${{ steps.creds.outputs.username }}:${{ steps.creds.outputs.password }}" \
+            --data-binary @functionapp.zip \
+            "https://${{ steps.creds.outputs.publish_url }}/api/zipdeploy"
