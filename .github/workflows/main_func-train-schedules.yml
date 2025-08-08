@@ -1,4 +1,4 @@
-name: Build and deploy Python project to Azure Function App - func-train-schedules
+name: Build and deploy Python Azure Functions - func-train-schedules
 
 on:
   push:
@@ -27,9 +27,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Deploy using publish profile
+      - name: Create deployment package
+        run: |
+          mkdir -p package
+          rsync -av --exclude '.git*' --exclude '__pycache__' ./ ./package
+          cd package
+          zip -r ../functionapp.zip .
+
+      - name: Deploy to Azure
         uses: azure/webapps-deploy@v2
         with:
           app-name: func-train-schedules
-          package: .
+          package: functionapp.zip
           publish-profile: ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
