@@ -39,7 +39,11 @@ jobs:
           cd package
           zip -r ../functionapp.zip .
 
-      # 5️⃣ Extract credentials from publish profile
+      # 5️⃣ Install xmllint tool for parsing XML
+      - name: Install xmllint (libxml2-utils)
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+
+      # 6️⃣ Extract credentials from publish profile
       - name: Extract publish profile credentials
         id: creds
         run: |
@@ -51,7 +55,7 @@ jobs:
           echo "username=$USERNAME" >> $GITHUB_OUTPUT
           echo "password=$PASSWORD" >> $GITHUB_OUTPUT
 
-      # 6️⃣ Deploy via direct Kudu ZipDeploy
+      # 7️⃣ Deploy via direct Kudu ZipDeploy
       - name: Deploy via Kudu ZipDeploy
         run: |
           curl -X POST \
