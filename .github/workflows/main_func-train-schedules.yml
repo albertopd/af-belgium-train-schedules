@@ -14,24 +14,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Get code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2️⃣ Set up Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # 3️⃣ Install dependencies into local build folder
       - name: Install dependencies into .python_packages
         run: |
           mkdir -p .python_packages/lib/site-packages
           python -m pip install --upgrade pip
           pip install -r requirements.txt --target ".python_packages/lib/site-packages"
 
-      # 4️⃣ Create deployment package (code + deps)
       - name: Create deployment package
         run: |
           mkdir -p package
@@ -39,16 +35,18 @@ jobs:
           cd package
           zip -r ../functionapp.zip .
 
-      # 5️⃣ Install xmllint tool for parsing XML
       - name: Install xmllint (libxml2-utils)
         run: sudo apt-get update && sudo apt-get install -y libxml2-utils
 
-      # 6️⃣ Extract credentials from publish profile
+      - name: Write publish profile to file (preserve quotes)
+        run: |
+          cat <<EOF > publishProfile.xml
+            ${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}
+            EOF
+
       - name: Extract publish profile credentials
         id: creds
         run: |
-          echo "${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}" > publishProfile.xml
-
           PUBLISH_URL=$(xmllint --xpath "string(//publishProfile[@publishMethod='ZipDeploy']/@publishUrl)" publishProfile.xml)
           USERNAME=$(xmllint --xpath "string(//publishProfile[@publishMethod='ZipDeploy']/@userName)" publishProfile.xml)
           PASSWORD=$(xmllint --xpath "string(//publishProfile[@publishMethod='ZipDeploy']/@userPWD)" publishProfile.xml)
@@ -57,7 +55,6 @@ jobs:
           echo "username=$USERNAME" >> $GITHUB_OUTPUT
           echo "password=$PASSWORD" >> $GITHUB_OUTPUT
 
-      # 7️⃣ Deploy via direct Kudu ZipDeploy
       - name: Deploy via Kudu ZipDeploy
         run: |
           curl -X POST \
