@@ -47,9 +47,11 @@ jobs:
       - name: Extract publish profile credentials
         id: creds
         run: |
-          PUBLISH_URL=$(echo "${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}" | xmllint --xpath "string(//publishProfile[@publishMethod='ZipDeploy']/@publishUrl)" -)
-          USERNAME=$(echo "${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}" | xmllint --xpath "string(//publishProfile[@publishMethod='ZipDeploy']/@userName)" -)
-          PASSWORD=$(echo "${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}" | xmllint --xpath "string(//publishProfile[@publishMethod='ZipDeploy']/@userPWD)" -)
+          echo "${{ secrets.AZURE_FUNCTIONAPP_PUBLISH_PROFILE }}" > publishProfile.xml
+
+          PUBLISH_URL=$(xmllint --xpath "string(//publishProfile[@publishMethod='ZipDeploy']/@publishUrl)" publishProfile.xml)
+          USERNAME=$(xmllint --xpath "string(//publishProfile[@publishMethod='ZipDeploy']/@userName)" publishProfile.xml)
+          PASSWORD=$(xmllint --xpath "string(//publishProfile[@publishMethod='ZipDeploy']/@userPWD)" publishProfile.xml)
 
           echo "publish_url=$PUBLISH_URL" >> $GITHUB_OUTPUT
           echo "username=$USERNAME" >> $GITHUB_OUTPUT
